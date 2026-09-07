@@ -37,7 +37,7 @@ export function registerTelegramRoutes(app: Express) { app.post("/api/telegram/w
     console.error("[Telegram] webhook processing failed", error);
     res.status(500).json({ ok: false });
   }
-}); app.get("/api/health", (_req, res) => res.json({ ok: missingEnv().length === 0, missing: missingEnv() })); app.get("/api/telegram/status", async (_req, res) => { try { res.json({ ok: true, ...(await telegramStatus()) }); } catch (error) { res.status(502).json({ ok: false, error: error instanceof Error ? error.message : "Telegram status failed" }); } }); }
+}); app.get("/api/health", (_req, res) => res.json({ ok: missingEnv().length === 0, missing: missingEnv() })); app.get("/api/cron/cleanup", async (_req, res) => { try { const deleted = await purgeExpiredAssets(); res.json({ ok: true, deleted }); } catch (error) { res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "cleanup failed" }); } }); app.get("/api/telegram/status", async (_req, res) => { try { res.json({ ok: true, ...(await telegramStatus()) }); } catch (error) { res.status(502).json({ ok: false, error: error instanceof Error ? error.message : "Telegram status failed" }); } }); }
 export async function configureTelegram() {
   if (!ENV.publicAppUrl || !ENV.telegramBotToken) return;
   await api("setMyCommands", { commands: [{ command: "start", description: "Open the menu" }, { command: "files", description: "Browse files and configs" }, { command: "services", description: "Browse services" }, { command: "pay", description: "Start an M-Pesa payment" }, { command: "upload", description: "Admin: upload files" }] });
