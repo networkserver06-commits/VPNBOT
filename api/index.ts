@@ -1,11 +1,13 @@
 import express from "express";
 import { registerTelegramRoutes } from "../server/telegram.js";
 import { ENV } from "../server/env.js";
+import { getPaymentLink } from "../server/db.js";
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 registerTelegramRoutes(app);
 app.post("/api/payments/mpesa/callback", (req, res) => { console.log("[M-Pesa callback]", JSON.stringify(req.body)); res.json({ ok: true }); });
 app.post("/api/payments/mpesa/success", (req, res) => { console.log("[M-Pesa success]", JSON.stringify(req.body)); res.json({ ok: true }); });
 app.post("/api/payments/mpesa/confirm", (req, res) => { console.log("[M-Pesa confirm]", JSON.stringify(req.body)); res.json({ ok: true }); });
+app.get("/pay/:slug", async (req, res) => { const link = await getPaymentLink(String(req.params.slug)); if (!link) return res.status(404).send("Payment link not found or inactive"); const target = `https://t.me/${ENV.telegramBotUsername || "LeeTechadmin_Bot"}?start=${encodeURIComponent(link.slug)}`; res.redirect(302, target); });
 app.get("/", (_req, res) => res.json({ service: "leetec-telegram-bot", telegramOnly: true, configured: Boolean(ENV.telegramBotToken && ENV.mongodbUri) }));
 export default app;
