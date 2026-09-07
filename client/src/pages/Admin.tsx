@@ -1,0 +1,76 @@
+import DashboardLayout from "@/components/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { trpc } from "@/lib/trpc";
+import { FileKey2, FolderOpen, Link2, Plus, Radio, Send, ShieldCheck, Wrench } from "lucide-react";
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { toast } from "sonner";
+
+const nav = [
+  { path: "/", label: "Overview" },
+  { path: "/assets", label: "Files & configs" },
+  { path: "/services", label: "Tech services" },
+  { path: "/telegram", label: "Telegram bot" },
+];
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return <DashboardLayout><div className="mx-auto max-w-7xl">{children}</div></DashboardLayout>;
+}
+
+function Header({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) {
+  return <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#e65d45]">{eyebrow}</p><h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p></div>{action}</div>;
+}
+
+export function Overview() {
+  const { data: overview, isLoading } = trpc.admin.overview.useQuery();
+  const [, setLocation] = useLocation();
+  const cards = [
+    { label: "Published assets", value: overview?.publishedAssets ?? 0, total: overview?.assets ?? 0, icon: FileKey2, tint: "bg-orange-50 text-orange-600" },
+    { label: "Tech services", value: overview?.publishedServices ?? 0, total: overview?.services ?? 0, icon: Wrench, tint: "bg-blue-50 text-blue-600" },
+    { label: "Telegram users", value: overview?.subscribers ?? 0, total: null, icon: Radio, tint: "bg-emerald-50 text-emerald-600" },
+  ];
+  return <Shell><Header eyebrow="Control room" title="Your tech distribution hub" description="Publish once from here and your Telegram community can discover the latest files, VPN configs, and useful services." action={<Button onClick={() => setLocation("/assets")} className="bg-slate-950 text-white hover:bg-slate-800"><Plus className="mr-2 h-4 w-4" />Add content</Button>} />
+    <div className="grid gap-4 md:grid-cols-3">{cards.map(card => <Card key={card.label} className="border-0 shadow-sm shadow-slate-200/60"><CardContent className="p-5"><div className="flex items-start justify-between"><div><p className="text-sm font-medium text-slate-500">{card.label}</p><p className="mt-3 text-4xl font-bold tracking-tight text-slate-950">{isLoading ? "—" : card.value}</p>{card.total !== null && <p className="mt-1 text-xs text-slate-400">{card.total} total in library</p>}</div><div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${card.tint}`}><card.icon className="h-5 w-5" /></div></div></CardContent></Card>)}</div>
+    <div className="mt-6 grid gap-6 lg:grid-cols-[1.25fr_.75fr]"><Card className="border-0 shadow-sm shadow-slate-200/60"><CardHeader><CardTitle className="text-lg">Quick start</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2"><button onClick={() => setLocation("/assets")} className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-[#e65d45]/40 hover:shadow-md"><FolderOpen className="mb-7 h-5 w-5 text-[#e65d45]" /><p className="font-semibold text-slate-900">Publish a file</p><p className="mt-1 text-xs leading-5 text-slate-500">Add a VPN profile, client, guide, or any shareable download.</p></button><button onClick={() => setLocation("/services")} className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"><Wrench className="mb-7 h-5 w-5 text-blue-600" /><p className="font-semibold text-slate-900">Add a service</p><p className="mt-1 text-xs leading-5 text-slate-500">Create a clean directory of your tools, support, and tech offers.</p></button></CardContent></Card><Card className="border-0 bg-slate-950 text-white shadow-sm shadow-slate-300"><CardContent className="p-6"><Send className="h-6 w-6 text-[#ff9b86]" /><h2 className="mt-8 text-xl font-semibold">Telegram is ready</h2><p className="mt-2 text-sm leading-6 text-slate-300">Users can send /files and /services to get the latest published content. You control everything from this room.</p><Button onClick={() => setLocation("/telegram")} variant="outline" className="mt-6 border-slate-700 bg-transparent text-white hover:bg-slate-800">View bot setup</Button></CardContent></Card></div>
+  </Shell>;
+}
+
+export function AssetsPage() {
+  const utils = trpc.useUtils();
+  const { data: assets = [], isLoading } = trpc.admin.assets.useQuery();
+  const config = trpc.admin.createConfig.useMutation({ onSuccess: () => { toast.success("Config published"); utils.admin.assets.invalidate(); utils.admin.overview.invalidate(); setTitle(""); setContent(""); }, onError: error => toast.error(error.message) });
+  const createFile = trpc.admin.createFile.useMutation({ onSuccess: () => { toast.success("File metadata published"); utils.admin.assets.invalidate(); utils.admin.overview.invalidate(); setTitle(""); setStorageKey(""); }, onError: error => toast.error(error.message) });
+  const toggle = trpc.admin.setAssetPublished.useMutation({ onSuccess: () => { utils.admin.assets.invalidate(); utils.admin.overview.invalidate(); }, onError: error => toast.error(error.message) });
+  const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [storageKey, setStorageKey] = useState(""); const [mode, setMode] = useState<"config" | "file">("config");
+  return <Shell><Header eyebrow="Library" title="Files & configs" description="Store VPN profiles, setup guides, and downloadable files. Telegram admins can also publish by sending a document with the caption /add Title." action={<div className="flex gap-2"><Button variant={mode === "config" ? "default" : "outline"} onClick={() => setMode("config")} className={mode === "config" ? "bg-slate-950 text-white" : "bg-white"}>Config</Button><Button variant={mode === "file" ? "default" : "outline"} onClick={() => setMode("file")} className={mode === "file" ? "bg-slate-950 text-white" : "bg-white"}>File link</Button></div>} />
+    <div className="grid gap-6 lg:grid-cols-[.82fr_1.18fr]"><Card className="border-0 shadow-sm shadow-slate-200/60"><CardHeader><CardTitle className="text-lg">Publish {mode === "config" ? "a config" : "a file link"}</CardTitle></CardHeader><CardContent className="space-y-4"><Input placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} />{mode === "config" ? <Textarea placeholder="Paste the VPN config or setup text here…" className="min-h-44" value={content} onChange={e => setContent(e.target.value)} /> : <><Input placeholder="Storage key (from uploaded file)" value={storageKey} onChange={e => setStorageKey(e.target.value)} /><p className="text-xs leading-5 text-slate-500">For the first version, upload through Telegram with <code className="rounded bg-slate-100 px-1">/add Title</code>. The dashboard field is ready for storage keys created by your upload flow.</p></>}<Button disabled={!title || (mode === "config" ? !content : !storageKey) || config.isPending || createFile.isPending} onClick={() => mode === "config" ? config.mutate({ title, kind: "config", contentText: content }) : createFile.mutate({ title, kind: "file", storageKey })} className="w-full bg-[#e65d45] text-white hover:bg-[#d94e36]">Publish to TechVault</Button></CardContent></Card>
+      <Card className="border-0 shadow-sm shadow-slate-200/60"><CardHeader><CardTitle className="text-lg">Published library <span className="ml-2 text-sm font-normal text-slate-400">{assets.length} items</span></CardTitle></CardHeader><CardContent>{isLoading ? <p className="text-sm text-slate-500">Loading library…</p> : assets.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center"><FileKey2 className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-medium text-slate-600">Your library is empty</p><p className="mt-1 text-xs text-slate-400">Publish your first config or send a document to the bot.</p></div> : <div className="space-y-3">{assets.map(asset => <div key={asset.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4"><div className="flex min-w-0 items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600"><FileKey2 className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{asset.title}</p><p className="mt-1 text-xs text-slate-400">#{asset.id} · {asset.kind} · {asset.published ? "published" : "hidden"}</p></div></div><Button size="sm" variant="outline" className="shrink-0 bg-white" onClick={() => toggle.mutate({ id: asset.id, published: !Boolean(asset.published) })}>{asset.published ? "Hide" : "Publish"}</Button></div>)}</div>}</CardContent></Card></div>
+  </Shell>;
+}
+
+export function ServicesPage() {
+  const utils = trpc.useUtils(); const { data: services = [], isLoading } = trpc.admin.services.useQuery();
+  const create = trpc.admin.createService.useMutation({ onSuccess: () => { toast.success("Service published"); utils.admin.services.invalidate(); utils.admin.overview.invalidate(); setTitle(""); setCategory(""); setDescription(""); setUrl(""); }, onError: error => toast.error(error.message) });
+  const toggle = trpc.admin.setServicePublished.useMutation({ onSuccess: () => { utils.admin.services.invalidate(); utils.admin.overview.invalidate(); }, onError: error => toast.error(error.message) });
+  const [title, setTitle] = useState(""); const [category, setCategory] = useState(""); const [description, setDescription] = useState(""); const [url, setUrl] = useState("");
+  return <Shell><Header eyebrow="Directory" title="Tech services" description="Build a clear catalog for your community: support, VPN setup, hosting, security, development, or anything else you offer." /><div className="grid gap-6 lg:grid-cols-[.82fr_1.18fr]"><Card className="border-0 shadow-sm shadow-slate-200/60"><CardHeader><CardTitle className="text-lg">Add a service</CardTitle></CardHeader><CardContent className="space-y-4"><Input placeholder="Service name" value={title} onChange={e => setTitle(e.target.value)} /><Input placeholder="Category (e.g. VPN, Support)" value={category} onChange={e => setCategory(e.target.value)} /><Textarea placeholder="Short description" className="min-h-32" value={description} onChange={e => setDescription(e.target.value)} /><div className="relative"><Link2 className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-9" placeholder="Optional URL" value={url} onChange={e => setUrl(e.target.value)} /></div><Button disabled={!title || !category || !description || create.isPending} onClick={() => create.mutate({ title, category, description, url })} className="w-full bg-[#e65d45] text-white hover:bg-[#d94e36]">Publish service</Button></CardContent></Card><Card className="border-0 shadow-sm shadow-slate-200/60"><CardHeader><CardTitle className="text-lg">Service catalog <span className="ml-2 text-sm font-normal text-slate-400">{services.length} entries</span></CardTitle></CardHeader><CardContent>{isLoading ? <p className="text-sm text-slate-500">Loading services…</p> : services.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center"><Wrench className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-medium text-slate-600">No services yet</p></div> : <div className="space-y-3">{services.map(service => <div key={service.id} className="rounded-2xl border border-slate-100 p-4"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-2"><p className="font-semibold text-slate-900">{service.title}</p><Badge variant="secondary" className="bg-blue-50 text-blue-700">{service.category}</Badge></div><p className="mt-2 text-sm leading-6 text-slate-500">{service.description}</p>{service.url && <a href={service.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"><Link2 className="h-3 w-3" />Open link</a>}</div><Button size="sm" variant="outline" className="shrink-0 bg-white" onClick={() => toggle.mutate({ id: service.id, published: !Boolean(service.published) })}>{service.published ? "Hide" : "Publish"}</Button></div></div>)}</div>}</CardContent></Card></div></Shell>;
+}
+
+export function TelegramPage() {
+  const commands = [["/start", "Show the welcome message and admin commands"], ["/files", "Send all published files and configs"], ["/services", "Show the public tech service directory"], ["/add Title", "Publish a Telegram document when used as its caption"], ["/addconfig Title", "Publish the text after the command as a config"], ["/service Title | Category | Description | URL", "Publish a service directly from Telegram"]];
+  return <Shell><Header eyebrow="Distribution" title="Telegram bot" description="Your BotFather token is stored server-side. The bot accepts public discovery commands and recognizes only your Telegram user ID as an administrator." /><div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]"><Card className="border-0 bg-slate-950 text-white shadow-sm shadow-slate-300"><CardContent className="p-7"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10"><ShieldCheck className="h-6 w-6 text-[#ff9b86]" /></div><h2 className="mt-8 text-2xl font-bold">Private by default</h2><p className="mt-3 max-w-lg text-sm leading-7 text-slate-300">Only the configured Telegram admin ID can publish files, configs, and services. Everyone else can browse only published content.</p><div className="mt-7 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4"><div className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" /><span className="text-sm text-slate-200">Bot credentials validated</span></div></CardContent></Card><Card className="border-0 shadow-sm shadow-slate-200/60"><CardHeader><CardTitle className="text-lg">Command sheet</CardTitle></CardHeader><CardContent className="space-y-3">{commands.map(([command, description]) => <div key={command} className="flex gap-3 rounded-2xl bg-slate-50 p-3"><code className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-bold text-[#b53f2d] shadow-sm">{command}</code><p className="text-xs leading-5 text-slate-500">{description}</p></div>)}</CardContent></Card></div></Shell>;
+}
+
+export function AdminApp() {
+  const [location] = useLocation();
+  if (location === "/assets") return <AssetsPage />;
+  if (location === "/services") return <ServicesPage />;
+  if (location === "/telegram") return <TelegramPage />;
+  return <Overview />;
+}
+
+export const dashboardNav = nav;
