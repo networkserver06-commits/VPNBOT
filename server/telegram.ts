@@ -54,7 +54,7 @@ function isAdmin(user?: TelegramUser) {
 function formatAssetList(items: Awaited<ReturnType<typeof listAssets>>) {
   if (!items.length) return "No shared files or configs have been published yet.";
   return items
-    .map((item, index) => `${index + 1}. ${item.title}${item.kind === "config" ? " [config]" : " [file]"}`)
+    .map((item, index) => `${index + 1}. ${item.title} · ${item.category}${item.kind === "config" ? " [config]" : " [file]"}`)
     .join("\n");
 }
 
@@ -121,12 +121,15 @@ async function handleAdminText(message: TelegramMessage, text: string) {
   if (command === "/addconfig") {
     const newline = argument.indexOf("\n");
     if (newline < 1) {
-      await sendMessage(chatId, "Usage: /addconfig Title then a new line with the config content");
+      await sendMessage(chatId, "Usage: /addconfig Category | Title then a new line with the config content");
       return;
     }
-    const title = argument.slice(0, newline).trim();
+    const header = argument.slice(0, newline).trim();
+    const [categoryPart, titlePart] = header.split("|").map(part => part.trim());
+    const category = titlePart ? categoryPart || "General" : "General";
+    const title = titlePart || categoryPart;
     const content = argument.slice(newline + 1).trim();
-    await createAsset({ kind: "config", title, contentText: content, published: 1 });
+    await createAsset({ kind: "config", title, category, contentText: content, published: 1 });
     await sendMessage(chatId, `Published config: ${title}`);
     return;
   }
@@ -159,11 +162,15 @@ async function handleDocument(message: TelegramMessage) {
   const response = await fetch(`https://api.telegram.org/file/bot${token}/${fileInfo.file_path}`);
   if (!response.ok) throw new Error("Could not download the Telegram file");
   const buffer = Buffer.from(await response.arrayBuffer());
-  const title = caption.replace(/^\/add\s*/i, "").trim() || message.document.file_name || "Shared file";
+  const header = caption.replace(/^\/add\s*/i, "").trim();
+  const [categoryPart, titlePart] = header.split("|").map(part => part.trim());
+  const category = titlePart ? categoryPart || "General" : "General";
+  const title = (titlePart || categoryPart || message.document.file_name || "Shared file").trim();
   const stored = await storagePut(`telegram-assets/${message.document.file_name ?? title}`, buffer, message.document.mime_type ?? "application/octet-stream");
   const id = await createAsset({
     kind: "file",
     title,
+    category,
     fileName: message.document.file_name ?? null,
     mimeType: message.document.mime_type ?? null,
     storageKey: stored.key,
@@ -198,7 +205,7 @@ async function handleMessage(message: TelegramMessage) {
       "TechVault\n\nUse /files to receive published files and VPN configs.\nUse /services to browse tech services.\nUse /help to see this message again.",
     );
     if (isAdmin(user)) {
-      await sendMessage(chatId, "Admin commands:\n/addconfig Title then config text\n/add Title (as a document caption)\n/service Title | Category | Description | URL\n/send asset-id");
+      await sendMessage(chatId, "Admin commands:\n/addconfig Category | Title then config text\n/add Category | Title (as a document caption)\n/service Title | Category | Description | URL\n/send asset-id");
     }
     return;
   }

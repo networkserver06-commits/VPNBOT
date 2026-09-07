@@ -16,6 +16,7 @@ export const sharedAssets = mysqlTable("shared_assets", {
   id: int("id").autoincrement().primaryKey(),
   kind: mysqlEnum("kind", ["file", "config"]).notNull(),
   title: varchar("title", { length: 160 }).notNull(),
+  category: varchar("category", { length: 80 }).notNull().default("General"),
   description: text("description"),
   fileName: varchar("fileName", { length: 255 }),
   mimeType: varchar("mimeType", { length: 120 }),
