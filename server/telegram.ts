@@ -27,7 +27,16 @@ export async function telegramStatus() {
   const webhook = await api<{ url?: string; pending_update_count?: number; last_error_message?: string; last_error_date?: number }>("getWebhookInfo", {});
   return { bot: me.username ?? null, botId: me.id ?? null, webhookUrl: webhook.url ?? "", pendingUpdates: webhook.pending_update_count ?? 0, lastError: webhook.last_error_message ?? null, lastErrorAt: webhook.last_error_date ? new Date(webhook.last_error_date * 1000).toISOString() : null };
 }
-export function registerTelegramRoutes(app: Express) { app.post("/api/telegram/webhook", (req, res) => { if (req.header("x-telegram-bot-api-secret-token") !== secret()) return res.status(403).json({ ok: false }); res.status(200).json({ ok: true }); void processTelegramUpdate(req.body as Update); }); app.get("/api/health", (_req, res) => res.json({ ok: missingEnv().length === 0, missing: missingEnv() })); app.get("/api/telegram/status", async (_req, res) => { try { res.json({ ok: true, ...(await telegramStatus()) }); } catch (error) { res.status(502).json({ ok: false, error: error instanceof Error ? error.message : "Telegram status failed" }); } }); }
+export function registerTelegramRoutes(app: Express) { app.post("/api/telegram/webhook", async (req, res) => {
+  if (req.header("x-telegram-bot-api-secret-token") !== secret()) return res.status(403).json({ ok: false });
+  try {
+    await processTelegramUpdate(req.body as Update);
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error("[Telegram] webhook processing failed", error);
+    res.status(500).json({ ok: false });
+  }
+}); app.get("/api/health", (_req, res) => res.json({ ok: missingEnv().length === 0, missing: missingEnv() })); app.get("/api/telegram/status", async (_req, res) => { try { res.json({ ok: true, ...(await telegramStatus()) }); } catch (error) { res.status(502).json({ ok: false, error: error instanceof Error ? error.message : "Telegram status failed" }); } }); }
 export async function configureTelegram() {
   if (!ENV.publicAppUrl || !ENV.telegramBotToken) return;
   await api("setMyCommands", { commands: [{ command: "start", description: "Open the menu" }, { command: "files", description: "Browse files and configs" }, { command: "services", description: "Browse services" }, { command: "pay", description: "Start an M-Pesa payment" }, { command: "upload", description: "Admin: upload files" }] });
