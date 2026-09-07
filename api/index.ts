@@ -1,10 +1,9 @@
 import express from "express";
-import { configureTelegram, registerTelegramRoutes } from "../server/telegram.js";
+import { registerTelegramRoutes } from "../server/telegram.js";
 import { ENV } from "../server/env.js";
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 registerTelegramRoutes(app);
-void configureTelegram().catch(error => console.error("[Telegram] setup failed", error));
 app.post("/api/payments/mpesa/callback", (req, res) => { console.log("[M-Pesa callback]", JSON.stringify(req.body)); res.json({ ok: true }); });
 app.post("/api/payments/mpesa/success", (req, res) => { console.log("[M-Pesa success]", JSON.stringify(req.body)); res.json({ ok: true }); });
 app.post("/api/payments/mpesa/confirm", (req, res) => { console.log("[M-Pesa confirm]", JSON.stringify(req.body)); res.json({ ok: true }); });
