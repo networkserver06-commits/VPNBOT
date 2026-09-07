@@ -1,7 +1,7 @@
 import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import { ENV } from "./env.js";
 
-export type Asset = { id: number; kind: "file" | "config"; title: string; category: string; fileName?: string | null; mimeType?: string | null; storageKey?: string | null; contentText?: string | null; sizeBytes?: number | null; published: number; expiresAt?: Date | null; createdAt: Date; updatedAt: Date };
+export type Asset = { id: number; kind: "file" | "config" | "link"; title: string; category: string; fileName?: string | null; mimeType?: string | null; storageKey?: string | null; contentText?: string | null; sizeBytes?: number | null; published: number; expiresAt?: Date | null; createdAt: Date; updatedAt: Date };
 export type Service = { id: number; title: string; category: string; description: string; url?: string | null; published: number; createdAt: Date; updatedAt: Date };
 let client: MongoClient | undefined; let db: ReturnType<MongoClient["db"]> | undefined; let bucket: GridFSBucket | undefined; let connecting: Promise<void> | undefined;
 export async function getMongo() {
