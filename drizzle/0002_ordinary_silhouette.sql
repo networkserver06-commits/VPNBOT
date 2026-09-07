@@ -1,1 +1,0 @@
-ALTER TABLE `shared_assets` ADD `category` varchar(80) DEFAULT 'General' NOT NULL;
