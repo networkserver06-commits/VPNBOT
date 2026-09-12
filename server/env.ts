@@ -6,6 +6,7 @@ export const ENV = {
   leetecApiKey: process.env.LEETEC_API_KEY ?? "",
   leetecTillId: process.env.LEETEC_TILL_ID ? Number(process.env.LEETEC_TILL_ID) : undefined,
   leetecStatusUrl: process.env.LEETEC_STATUS_URL ?? "",
+  leetecWebhookSecret: process.env.LEETEC_WEBHOOK_SECRET ?? "",
   publicAppUrl: (process.env.PUBLIC_APP_URL ?? "").replace(/\/+$/, ""),
   telegramBotUsername: process.env.TELEGRAM_BOT_USERNAME ?? "LeeTechadmin_Bot",
 };
