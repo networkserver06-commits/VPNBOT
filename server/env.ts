@@ -3,6 +3,7 @@ export const ENV = {
   mongodbDatabase: process.env.MONGODB_DATABASE ?? "leetec_vpn_bot",
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
   telegramAdminUserId: process.env.TELEGRAM_ADMIN_USER_ID ?? "",
+  leetecBaseUrl: (process.env.LEETEC_BASE_URL ?? "https://leetec.online").replace(/\/+$/, ""),
   leetecApiKey: process.env.LEETEC_API_KEY ?? "",
   leetecTillId: process.env.LEETEC_TILL_ID ? Number(process.env.LEETEC_TILL_ID) : undefined,
   leetecStatusUrl: process.env.LEETEC_STATUS_URL ?? "",
